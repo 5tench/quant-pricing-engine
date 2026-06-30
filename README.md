@@ -38,21 +38,30 @@ The cloud side matters because the tool should eventually run like real software
 
 ```text
 quant-pricing-engine/
-├── terraform/              # AWS infrastructure
-│   ├── main.tf
-│   ├── variables.tf
-│   ├── outputs.tf
-│   ├── versions.tf
-│   └── terraform.tfvars.example
-│
-├── src/                    # planned Python package
-│   └── quant_pricing_engine/
-│
-├── tests/                  # planned pytest suite
-├── docker-compose.yml      # planned Jenkins/runtime compose file
-├── Jenkinsfile             # planned CI pipeline
-├── ROADMAP.md
-└── README.md
+|-- README.md
+|-- ROADMAP.md
+|-- Makefile
+|-- pyproject.toml
+|-- ci/
+|   `-- Jenkinsfile
+|-- docs/
+|   |-- architecture.md
+|   |-- codex_workflow.md
+|   |-- project_conventions.md
+|   |-- runbook.md
+|   `-- adr/
+|       `-- 0001-repo-structure.md
+|-- infra/
+|   `-- terraform/
+|       |-- envs/
+|       |   `-- dev/
+|       `-- modules/
+|-- scripts/
+|   |-- bootstrap.sh
+|   `-- validate.sh
+|-- src/
+|   `-- quant_pricing_engine/
+`-- tests/
 ```
 
 ---
@@ -123,7 +132,7 @@ Before leaving anything online for long:
 From the repo root:
 
 ```bash
-cd terraform
+cd infra/terraform/envs/dev
 terraform init
 terraform fmt -recursive
 terraform validate
@@ -198,6 +207,18 @@ A few rules for keeping this project honest:
 - no treating AI-generated code as correct until tests and review back it up
 
 The point is to build a tool that earns trust slowly.
+
+---
+
+## Skeleton Validation
+
+This repo starts with a minimal importable Python package and a basic validation script:
+
+```bash
+make validate
+```
+
+The script runs the package skeleton test. If Terraform is installed, it also checks formatting and validates the dev environment.
 
 ---
 

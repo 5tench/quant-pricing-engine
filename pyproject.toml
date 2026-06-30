@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quant-pricing-engine"
+version = "0.1.0"
+description = "Research-first pricing engine for options and futures."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "quant-pricing-engine maintainers" }
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
