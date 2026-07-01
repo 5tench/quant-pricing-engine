@@ -1,0 +1,17 @@
+pipeline {
+  agent any
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Validate Skeleton') {
+      steps {
+        sh 'sh ./scripts/validate.sh'
+      }
+    }
+  }
+}
