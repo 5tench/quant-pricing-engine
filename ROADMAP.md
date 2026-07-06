@@ -66,7 +66,7 @@ No live trading until the research, testing, and risk layers are real.
 
 ### Build
 
-- `docker-compose.yml` for Jenkins
+- `docker-compose.yaml` for Jenkins
 - persistent Jenkins home on EBS
 - baseline `Jenkinsfile`
 - GitHub integration through webhook or polling

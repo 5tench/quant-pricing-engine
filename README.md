@@ -25,7 +25,7 @@ The cloud side matters because the tool should eventually run like real software
 | Area | Status | Notes |
 | --- | --- | --- |
 | Terraform AWS baseline | In progress | Initial AWS infrastructure is being built first. |
-| Jenkins controller | In progress | Jenkins will run through Docker and keep state on EBS. |
+| Jenkins controller | In progress | Jenkins runs through Docker Compose and keeps state on EBS. |
 | Dockerized runtime | Planned | The pricing engine should run the same locally and in AWS. |
 | Python pricing kernel | Planned | First target is Black-Scholes pricing and Greeks. |
 | Unit tests | Planned | `pytest` should protect the math before anything deploys. |
@@ -106,9 +106,9 @@ Initial AWS pieces:
 - EC2 controller host
 - EC2 key pair
 - EBS volume for Jenkins state
-- bootstrap script for Docker/Jenkins setup
+- bootstrap template for Docker Compose and Jenkins setup
 
-The EBS volume matters because the Jenkins controller should be disposable while Jenkins state survives. The EC2 instance can be rebuilt, but the pipeline history and configuration should not vanish every time the host is replaced.
+The EBS volume matters because the Jenkins controller should be disposable while Jenkins state survives. Jenkins home is mounted at `/srv/jenkins/home` on the controller host.
 
 ---
 
@@ -218,7 +218,7 @@ This repo starts with a minimal importable Python package and a basic validation
 make validate
 ```
 
-The script runs the package skeleton test. If Terraform is installed, it also checks formatting and validates the dev environment.
+The script runs the package skeleton test. If Terraform is installed, it also checks formatting and validates the dev environment. This is a repo health check, not source-control validation.
 
 ---
 

@@ -1,4 +1,4 @@
-# Provisions the core Virtual Private Cloud network boundary
+# Dev network boundary for the Jenkins controller.
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
@@ -8,7 +8,6 @@ resource "aws_vpc" "main" {
   }
 }
 
-# Attaches an Internet Gateway to allow external web traffic
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
 
@@ -17,7 +16,7 @@ resource "aws_internet_gateway" "igw" {
   }
 }
 
-# Creates the public subnet anchored to your first Availability Zone
+# Single public subnet for the current lab controller.
 resource "aws_subnet" "public_tier" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.subnet_cidr
@@ -29,7 +28,6 @@ resource "aws_subnet" "public_tier" {
   }
 }
 
-# Defines the routing table directing local traffic to the Internet Gateway
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main.id
 
@@ -43,13 +41,12 @@ resource "aws_route_table" "public_rt" {
   }
 }
 
-# Binds the public subnet to the internet-bound route table
 resource "aws_route_table_association" "public_assoc" {
   subnet_id      = aws_subnet.public_tier.id
   route_table_id = aws_route_table.public_rt.id
 }
 
-# Configures dynamic firewall rules based on your ingress/egress maps
+# Keep ingress restricted to trusted /32 CIDRs while this stays public.
 resource "aws_security_group" "jenkins_sg" {
   name        = var.terraform_sg
   description = var.terraform_sg_description
@@ -82,27 +79,28 @@ resource "aws_security_group" "jenkins_sg" {
   }
 }
 
-# Registers your local SSH public key with AWS for instance access
 resource "aws_key_pair" "deployer_key" {
   key_name   = var.key_pair_name
   public_key = file(pathexpand(var.public_key_path))
 }
 
-# Deploys the EC2 host and injects the automated bootstrap script
+# Controller bootstrap installs Docker, mounts EBS, and starts Compose.
 resource "aws_instance" "jenkins_controller" {
   ami                    = var.ami_id
   instance_type          = var.instance_type
   subnet_id              = aws_subnet.public_tier.id
   vpc_security_group_ids = [aws_security_group.jenkins_sg.id]
   key_name               = aws_key_pair.deployer_key.key_name
-  user_data              = var.tfinstance_jenkins_startup_script
+  user_data = templatefile("${path.module}/user_data.sh.tftpl", {
+    docker_compose_content = file("${path.module}/docker-compose.yaml")
+  })
 
   tags = {
     Name = var.tfinstance_jenkins
   }
 }
 
-# Provisions a persistent stateful storage drive in the exact same AZ
+# Jenkins state lives on this EBS volume through /srv/jenkins/home.
 resource "aws_ebs_volume" "jenkins_volume" {
   availability_zone = var.availability_zones[0]
   size              = var.ebs_volume_size
@@ -113,7 +111,6 @@ resource "aws_ebs_volume" "jenkins_volume" {
   }
 }
 
-# Mounts the EBS volume to the EC2 instance with safe auto-detach enabled
 resource "aws_volume_attachment" "jenkins_attachment" {
   device_name  = "/dev/sdh"
   volume_id    = aws_ebs_volume.jenkins_volume.id

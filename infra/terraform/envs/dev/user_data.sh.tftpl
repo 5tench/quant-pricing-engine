@@ -1,0 +1,50 @@
+#!/bin/bash
+set -euxo pipefail
+
+apt-get update -y
+apt-get install -y docker.io docker-compose
+systemctl stop docker || true
+
+TARGET_DEV=""
+for attempt in $(seq 1 60); do
+  for dev in /dev/nvme1n1 /dev/xvdh /dev/sdh; do
+    if [ -b "$dev" ]; then
+      TARGET_DEV="$dev"
+      break 2
+    fi
+  done
+  sleep 10
+done
+
+if [ -z "$TARGET_DEV" ]; then
+  echo "No attached Jenkins EBS device found after waiting." >&2
+  exit 1
+fi
+
+if ! blkid "$TARGET_DEV"; then
+  mkfs -t ext4 "$TARGET_DEV"
+fi
+
+mkdir -p /srv
+if ! mountpoint -q /srv; then
+  mount "$TARGET_DEV" /srv
+fi
+
+DEVICE_UUID=$(blkid -s UUID -o value "$TARGET_DEV")
+if ! grep -q "$DEVICE_UUID" /etc/fstab; then
+  echo "UUID=$DEVICE_UUID /srv ext4 defaults,nofail 0 2" >> /etc/fstab
+fi
+
+mkdir -p /srv/jenkins/home
+chown -R 1000:1000 /srv/jenkins/home
+
+cat > /srv/jenkins/docker-compose.yaml <<'COMPOSE'
+${docker_compose_content}
+COMPOSE
+
+systemctl daemon-reload
+systemctl enable docker
+systemctl start docker
+
+cd /srv/jenkins
+docker-compose up -d

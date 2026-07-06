@@ -16,6 +16,7 @@ dist/
 **/terraform.tfstate.*
 **/.terraform.tfstate.lock.info
 **/terraform.tfvars
+**/terraform.tfvars.json
 **/*.tfplan
 crash.log
 crash.*.log
@@ -28,8 +29,13 @@ override.tf.json
 .env
 .env.*
 !.env.example
+.aws/
+aws/
+credentials
+credentials.*
 .vscode/
 .idea/
+*.code-workspace
 *.log
 
 # OS
