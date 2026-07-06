@@ -19,7 +19,7 @@ output "jenkins_url" {
 # Quick-copy command for first-time Jenkins unlock password retrieval
 output "jenkins_initial_admin_password_command" {
   description = "Command to retrieve the initial Jenkins admin password from the EC2 host"
-  value       = "ssh -i ${replace(var.public_key_path, ".pub", "")} ubuntu@${aws_instance.jenkins_controller.public_ip} 'sudo docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword'"
+  value       = "ssh -i ${replace(var.public_key_path, ".pub", "")} ubuntu@${aws_instance.jenkins_controller.public_ip} 'sudo cat /srv/jenkins/home/secrets/initialAdminPassword'"
 }
 
 # The ID of the generated VPC network boundary
