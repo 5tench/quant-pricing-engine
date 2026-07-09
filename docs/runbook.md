@@ -27,7 +27,7 @@ terraform validate
 terraform plan
 ```
 
-Before applying, replace `allowed_ingress_cidrs` in `terraform.tfvars` with a trusted public /32 IP CIDR.
+Before applying, replace `allowed_ingress_cidrs` in `terraform.tfvars` with a trusted public /32 IP.
 
 The Jenkins controller is bootstrapped through `user_data.sh.tftpl`. Docker Compose runs Jenkins from `docker-compose.yaml`, with Jenkins home mounted at `/srv/jenkins/home` on the attached EBS volume.
 
