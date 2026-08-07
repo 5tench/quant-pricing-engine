@@ -23,7 +23,7 @@ ingress_rules = {
 }
 
 allowed_ingress_cidrs = [
-  "203.0.113.10/32"
+  "x.x.x.10/32"
 ]
 
 egress_rules = {
