@@ -11,6 +11,8 @@ infra/terraform/
 
 The `dev` environment currently provisions the small AWS lab chassis: VPC, public subnet, internet gateway, route table, Jenkins security group, EC2 controller, key pair, and EBS volume.
 
+The controller uses the latest official RHEL 9 x86_64 AMI in the selected Region. It is resolved at plan time, so no AMI ID belongs in `terraform.tfvars`. Accept the RHEL AWS Marketplace terms once for the AWS account before the first apply. RHEL's subscription-included image can incur an hourly software charge; destroy the environment after each lab session.
+
 ## Quickstart
 
 ```bash
