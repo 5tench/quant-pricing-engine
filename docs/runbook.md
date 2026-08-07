@@ -47,7 +47,11 @@ The controller currently runs in Docker Compose. Jenkins home is persisted on EB
 /srv/jenkins/home
 ```
 
-The next configuration step is to make the controller able to run the repo validation command consistently. That may require installing `terraform`, `python`, and any future test tools inside the Jenkins controller container or moving builds to a dedicated Jenkins agent image.
+The controller remains a minimal Jenkins service. Repository validation runs on
+the dedicated `ci` inbound agent defined in `ci/agent/Dockerfile`; its setup
+instructions are in `ci/agent/README.md`. The agent contains Python,
+Terraform, and Docker Compose tooling, but it does not receive Docker socket,
+AWS credential, or repository-secret access.
 
 ## Teardown
 

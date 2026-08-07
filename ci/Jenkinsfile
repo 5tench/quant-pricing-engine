@@ -1,47 +1,60 @@
 pipeline {
-  agent any
+    agent { label 'ci' }
 
-  stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
+    options {
+        timestamps()
+        ansiColor('xterm')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '20'))
     }
 
-    stage('Python Test') {
-      steps {
-        sh 'PYTHONPATH=src python -m unittest discover -s tests'
-      }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Python Test') {
+            steps {
+                sh 'PYTHONPATH=src python -m unittest discover -s tests'
+            }
+        }
+
+        stage('Terraform Format Check') {
+            steps {
+                sh 'terraform -chdir=infra/terraform/envs/dev fmt -check -recursive'
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                sh 'terraform -chdir=infra/terraform/envs/dev init -backend=false'
+            }
+        }
+
+        stage('Terraform Validate') {
+            steps {
+                sh 'terraform -chdir=infra/terraform/envs/dev validate'
+            }
+        }
+
+        stage('Docker Compose Config Check') {
+            steps {
+                sh '''
+                    if command -v docker-compose >/dev/null 2>&1; then
+                        docker-compose -f infra/terraform/envs/dev/docker-compose.yaml config
+                    else
+                        docker compose -f infra/terraform/envs/dev/docker-compose.yaml config
+                    fi
+                '''
+            }
+        }
     }
 
-    stage('Terraform Format Check') {
-      steps {
-        sh 'terraform -chdir=infra/terraform/envs/dev fmt -check -recursive'
-      }
+    post {
+        always {
+            echo 'CI pipeline completed.'
+        }
     }
-
-    stage('Terraform Init') {
-      steps {
-        sh 'terraform -chdir=infra/terraform/envs/dev init -backend=false'
-      }
-    }
-
-    stage('Terraform Validate') {
-      steps {
-        sh 'terraform -chdir=infra/terraform/envs/dev validate'
-      }
-    }
-
-    stage('Docker Compose Config Check') {
-      steps {
-        sh '''
-          if command -v docker-compose >/dev/null 2>&1; then
-            docker-compose -f infra/terraform/envs/dev/docker-compose.yaml config
-          else
-            docker compose -f infra/terraform/envs/dev/docker-compose.yaml config
-          fi
-        '''
-      }
-    }
-  }
 }
