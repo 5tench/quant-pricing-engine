@@ -84,16 +84,51 @@ resource "aws_key_pair" "deployer_key" {
   public_key = file(pathexpand(var.public_key_path))
 }
 
-# Controller bootstrap installs Docker, mounts EBS, and starts Compose.
+# Resolve the newest official RHEL 9 x86_64 AMI in the configured AWS Region.
+# The RHEL Marketplace subscription terms must be accepted once per AWS account.
+data "aws_ami" "rhel_9" {
+  most_recent = true
+  owners      = ["309956199498"] # Red Hat
+
+  filter {
+    name   = "name"
+    values = ["RHEL-9*-x86_64-*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+# Controller bootstrap installs Docker Engine, mounts EBS, and starts Compose.
 resource "aws_instance" "jenkins_controller" {
-  ami                    = var.ami_id
+  ami                    = data.aws_ami.rhel_9.id
   instance_type          = var.instance_type
   subnet_id              = aws_subnet.public_tier.id
   vpc_security_group_ids = [aws_security_group.jenkins_sg.id]
   key_name               = aws_key_pair.deployer_key.key_name
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
-    docker_compose_content = file("${path.module}/docker-compose.yaml")
+    docker_compose_content        = file("${path.module}/docker-compose.yaml")
+    controller_dockerfile_content = file("${path.module}/../../../../ci/controller/Dockerfile")
+    controller_plugins_content    = file("${path.module}/../../../../ci/controller/plugins.txt")
+    controller_jcasc_content      = file("${path.module}/../../../../ci/controller/jenkins.yaml")
   })
+
+  # Avoid T3 Unlimited-mode CPU surplus charges during this short-lived lab.
+  credit_specification {
+    cpu_credits = "standard"
+  }
 
   tags = {
     Name = var.tfinstance_jenkins

@@ -39,7 +39,16 @@ sudo cat /srv/jenkins/home/secrets/initialAdminPassword
 
 ## Jenkins Controller
 
-For the first setup pass, install the suggested plugins and create an admin user through the Jenkins UI. The initial pipeline target is the repository `ci/Jenkinsfile`, which calls `scripts/validate.sh`.
+The controller is configured at first boot through Jenkins Configuration as
+Code (JCasC). Its image, plugins, and configuration live under
+`ci/controller`. Terraform writes the controller image build context under
+`/srv/jenkins/controller`, generates a strong administrator password directly
+on the host, builds the image, and starts Jenkins. The root-only
+`/srv/jenkins/controller.env` file is never committed and the secret is never
+stored in Terraform state. After apply, run the
+`jenkins_initial_admin_password_command` Terraform output to retrieve it.
+
+The initial pipeline target is the repository `ci/Jenkinsfile`.
 
 The controller currently runs in Docker Compose. Jenkins home is persisted on EBS at:
 

@@ -1,10 +1,24 @@
 services:
   jenkins:
-    image: jenkins/jenkins:lts
+    image: quantops-jenkins-controller:0.1.0
     container_name: jenkins-server
     ports:
       - "8080:8080"
       - "50000:50000"
     volumes:
       - /srv/jenkins/home:/var/jenkins_home
+    env_file:
+      - path: ./controller.env
+        required: false
+    restart: unless-stopped
+
+  ci-agent:
+    image: ${CI_AGENT_IMAGE:-quantops-jenkins-ci-agent:0.1.0}
+    profiles:
+      - ci
+    environment:
+      JENKINS_AGENT_NAME: ci
+      JENKINS_SECRET: ${JENKINS_AGENT_SECRET:-}
+      JENKINS_URL: http://jenkins:8080
+      JENKINS_AGENT_WORKDIR: /home/jenkins/agent
     restart: unless-stopped
