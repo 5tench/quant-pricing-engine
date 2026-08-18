@@ -2,4 +2,8 @@
 configuration-as-code
 matrix-auth
 git
+credentials-binding
 pipeline-model-definition
+pipeline-stage-view
+ansicolor
+timestamper
