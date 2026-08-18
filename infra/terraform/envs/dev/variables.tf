@@ -93,11 +93,6 @@ variable "egress_rules" {
 }
 
 # Compute host and deployment key specifications
-variable "ami_id" {
-  description = "AMI ID for the EC2 controller host"
-  type        = string
-}
-
 variable "instance_type" {
   description = "EC2 compute instance sizing type"
   type        = string

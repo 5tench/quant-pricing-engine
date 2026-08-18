@@ -1,11 +1,30 @@
 #!/bin/bash
 set -euxo pipefail
 
-apt-get update -y
-apt-get install -y docker.io docker-compose
-systemctl stop docker || true
+# Capture bootstrap output both to a dedicated log and cloud-init's console/log stream.
+exec > >(tee -a /var/log/jenkins-bootstrap.log | logger -t jenkins-bootstrap -s 2>/dev/console) 2>&1
+
+echo "=== Jenkins controller bootstrap starting ==="
+date
+
+echo "[1/6] Installing Docker repository prerequisites..."
+dnf -y install dnf-plugins-core curl openssl
+
+echo "[2/6] Configuring Docker CE repository..."
+dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+
+echo "[3/6] Installing Docker Engine and Compose..."
+dnf -y install \
+  docker-ce \
+  docker-ce-cli \
+  containerd.io \
+  docker-buildx-plugin \
+  docker-compose-plugin
+
+echo "[4/6] Waiting for Jenkins EBS volume..."
 
 TARGET_DEV=""
+
 for attempt in $(seq 1 60); do
   for dev in /dev/nvme1n1 /dev/xvdh /dev/sdh; do
     if [ -b "$dev" ]; then
@@ -13,38 +32,123 @@ for attempt in $(seq 1 60); do
       break 2
     fi
   done
+
+  echo "EBS volume not visible yet; attempt $${attempt}/60..."
   sleep 10
 done
 
 if [ -z "$TARGET_DEV" ]; then
-  echo "No attached Jenkins EBS device found after waiting." >&2
+  echo "ERROR: No attached Jenkins EBS device found after waiting." >&2
   exit 1
 fi
 
-if ! blkid "$TARGET_DEV"; then
+echo "Found Jenkins EBS device: $TARGET_DEV"
+
+if ! blkid "$TARGET_DEV" >/dev/null 2>&1; then
+  echo "Formatting $TARGET_DEV as ext4..."
   mkfs -t ext4 "$TARGET_DEV"
+else
+  echo "$TARGET_DEV already has a filesystem."
 fi
 
 mkdir -p /srv
+
 if ! mountpoint -q /srv; then
+  echo "Mounting $TARGET_DEV at /srv..."
   mount "$TARGET_DEV" /srv
+else
+  echo "/srv is already mounted."
 fi
 
 DEVICE_UUID=$(blkid -s UUID -o value "$TARGET_DEV")
-if ! grep -q "$DEVICE_UUID" /etc/fstab; then
+
+if ! grep -q "UUID=$DEVICE_UUID" /etc/fstab; then
+  echo "Adding $DEVICE_UUID to /etc/fstab..."
   echo "UUID=$DEVICE_UUID /srv ext4 defaults,nofail 0 2" >> /etc/fstab
 fi
 
+echo "[5/6] Preparing Jenkins filesystem..."
+
 mkdir -p /srv/jenkins/home
 chown -R 1000:1000 /srv/jenkins/home
+
+mkdir -p /srv/jenkins/controller
 
 cat > /srv/jenkins/docker-compose.yaml <<'COMPOSE'
 ${docker_compose_content}
 COMPOSE
 
-systemctl daemon-reload
-systemctl enable docker
-systemctl start docker
+cat > /srv/jenkins/controller/Dockerfile <<'CONTROLLER_DOCKERFILE'
+${controller_dockerfile_content}
+CONTROLLER_DOCKERFILE
+
+cat > /srv/jenkins/controller/plugins.txt <<'CONTROLLER_PLUGINS'
+${controller_plugins_content}
+CONTROLLER_PLUGINS
+
+cat > /srv/jenkins/controller/jenkins.yaml <<'CONTROLLER_JCASC'
+${controller_jcasc_content}
+CONTROLLER_JCASC
+
+# Generate the initial administrator secret only on the controller host. Do not
+# trace this block: cloud-init and bootstrap logs must never contain the value.
+if [ ! -s /srv/jenkins/controller.env ]; then
+  set +x
+
+  IMDS_TOKEN=$(curl -fsS --connect-timeout 2 -X PUT \
+    -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" \
+    http://169.254.169.254/latest/api/token || true)
+  if [ -n "$IMDS_TOKEN" ]; then
+    CONTROLLER_PUBLIC_IP=$(curl -fsS --connect-timeout 2 \
+      -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" \
+      http://169.254.169.254/latest/meta-data/public-ipv4 || true)
+  else
+    CONTROLLER_PUBLIC_IP=$(curl -fsS --connect-timeout 2 \
+      http://169.254.169.254/latest/meta-data/public-ipv4 || true)
+  fi
+
+  if [ -z "$CONTROLLER_PUBLIC_IP" ]; then
+    CONTROLLER_PUBLIC_IP=localhost
+  fi
+
+  JENKINS_ADMIN_PASSWORD=$(openssl rand -base64 36 | tr -d '\n')
+  cat > /srv/jenkins/controller.env <<EOF
+JENKINS_ADMIN_ID=admin
+JENKINS_ADMIN_PASSWORD=$JENKINS_ADMIN_PASSWORD
+JENKINS_URL=http://$CONTROLLER_PUBLIC_IP:8080/
+EOF
+  chmod 600 /srv/jenkins/controller.env
+  unset JENKINS_ADMIN_PASSWORD IMDS_TOKEN CONTROLLER_PUBLIC_IP
+
+  set -x
+  echo "Generated the controller-local administrator credential."
+else
+  chmod 600 /srv/jenkins/controller.env
+fi
+
+echo "Starting Docker..."
+systemctl enable --now docker
+
+echo "Verifying Docker..."
+docker --version
+
+echo "Verifying Docker Compose..."
+docker compose version
+
+echo "[6/6] Starting Jenkins..."
 
 cd /srv/jenkins
-docker-compose up -d
+
+echo "Building the declarative Jenkins controller image..."
+docker build --tag quantops-jenkins-controller:0.1.0 /srv/jenkins/controller
+
+docker compose up -d jenkins
+
+echo "Verifying Jenkins containers..."
+docker compose ps
+
+echo "Verifying Docker service..."
+systemctl is-active --quiet docker
+
+echo "=== Jenkins controller bootstrap completed successfully ==="
+date

@@ -29,6 +29,7 @@ override.tf.json
 .env
 .env.*
 !.env.example
+**/controller.env
 .aws/
 aws/
 credentials

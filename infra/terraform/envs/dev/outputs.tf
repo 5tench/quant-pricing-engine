@@ -7,7 +7,7 @@ output "jenkins_public_ip" {
 # Quick-copy SSH command using your local key
 output "ssh_connection_string" {
   description = "Command to SSH directly into the Jenkins host"
-  value       = "ssh -i ${replace(var.public_key_path, ".pub", "")} ubuntu@${aws_instance.jenkins_controller.public_ip}"
+  value       = "ssh -i ${replace(var.public_key_path, ".pub", "")} ec2-user@${aws_instance.jenkins_controller.public_ip}"
 }
 
 # Browser URL for the Jenkins controller
@@ -16,10 +16,10 @@ output "jenkins_url" {
   value       = "http://${aws_instance.jenkins_controller.public_ip}:8080"
 }
 
-# Quick-copy command for first-time Jenkins unlock password retrieval
+# Quick-copy command for the JCasC-generated administrator credential
 output "jenkins_initial_admin_password_command" {
-  description = "Command to retrieve the initial Jenkins admin password from the EC2 host"
-  value       = "ssh -i ${replace(var.public_key_path, ".pub", "")} ubuntu@${aws_instance.jenkins_controller.public_ip} 'sudo cat /srv/jenkins/home/secrets/initialAdminPassword'"
+  description = "Command to retrieve the controller-local Jenkins admin password after first boot"
+  value       = "ssh -i ${replace(var.public_key_path, ".pub", "")} ec2-user@${aws_instance.jenkins_controller.public_ip} 'sudo grep \"^JENKINS_ADMIN_PASSWORD=\" /srv/jenkins/controller.env'"
 }
 
 # The ID of the generated VPC network boundary
