@@ -39,6 +39,11 @@ credentials.*
 *.code-workspace
 *.log
 
+# Local GitHub Project exports
+/project.json
+/project-fields.json
+/project-items.json
+
 # OS
 .DS_Store
 Thumbs.db

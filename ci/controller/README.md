@@ -7,7 +7,8 @@ separate from `ci/agent`, which is the isolated environment that executes CI.
 
 - `Dockerfile` extends the official Jenkins controller image.
 - `plugins.txt` declares the small controller plugin set.
-- `jenkins.yaml` configures Jenkins Configuration as Code (JCasC).
+- `jenkins.yaml` configures Jenkins Configuration as Code (JCasC), the
+  permanent `ci` node, and the repository Pipeline job.
 - `controller.env.example` documents the host-local bootstrap variables.
 
 ## First boot
@@ -30,13 +31,13 @@ root-only host file. The administrator ID is `admin`.
 During bootstrap, Terraform copies this directory to `/srv/jenkins/controller`
 and builds the controller image locally before Docker Compose starts it.
 
-On an empty Jenkins home, JCasC creates the administrator and disables the
-interactive unlock/setup wizard. It does not overwrite an existing Jenkins
-home: migrate an existing controller deliberately rather than deleting its
-EBS-backed state.
+On startup, Jenkins reads JCasC from the versioned controller image, creates
+or reconciles the declared configuration, and disables the interactive
+unlock/setup wizard. Jenkins state remains on EBS; configuration updates do
+not depend on a stale reference file copied into the persistent home.
 
 ## Scope
 
-The controller has zero executors. It orchestrates pipelines; `ci-agent`
-executes them. CI-agent registration and pipeline/job provisioning remain the
-next steps after this first-boot configuration is proven.
+The controller has zero executors. It orchestrates the JCasC-managed
+`quant-pricing-engine` Pipeline; the inbound `ci-agent` executes it. GitHub
+trigger provisioning remains a separate layer of work.

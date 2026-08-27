@@ -24,11 +24,13 @@ The cloud side matters because the tool should eventually run like real software
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Terraform AWS baseline | In progress | Initial AWS infrastructure is being built first. |
-| Jenkins controller | In progress | Jenkins runs through Docker Compose and keeps state on EBS. |
+| Terraform AWS baseline | Verified | Terraform provisions the RHEL 9 lab environment, restricted networking, and persistent EBS state. |
+| Jenkins controller | Verified | The zero-executor controller runs through Docker Compose and loads configuration from the versioned JCasC image. |
+| Jenkins CI agent | Verified | The dedicated agent is provisioned as code and connects to the controller over WebSocket. |
+| Pipeline provisioning | Ready for verification | JCasC declares the repository Pipeline job from `ci/Jenkinsfile`. |
 | Dockerized runtime | Planned | The pricing engine should run the same locally and in AWS. |
 | Python pricing kernel | Planned | First target is Black-Scholes pricing and Greeks. |
-| Unit tests | Planned | `pytest` should protect the math before anything deploys. |
+| Unit tests | Baseline | The package skeleton test runs locally and in the Jenkins pipeline. |
 | Backtesting | Planned | Historical validation comes after the pricing kernel works. |
 | Live execution | Out of scope for now | Research, logging, and simulation first. No live orders yet. |
 
@@ -180,16 +182,15 @@ Planned next steps:
 
 The pipeline has one simple job at first: do not let broken math move forward.
 
-Planned Jenkins stages:
+Current Jenkins stages:
 
 ```text
 checkout
 terraform fmt
+terraform init (backend disabled)
 terraform validate
-python install
-pytest
-Docker build
-publish reports
+Python package tests
+Docker Compose configuration check
 ```
 
 Once the Python kernel exists, the CI loop should prove that the model still works before anything gets packaged or deployed.
@@ -228,9 +229,8 @@ See [`ROADMAP.md`](./ROADMAP.md) for the fuller build plan.
 
 Near-term priorities:
 
-1. Finish and harden the Terraform baseline.
-2. Run Jenkins through Docker with persistent EBS-backed state.
-3. Add a baseline `Jenkinsfile`.
-4. Create the Python package structure.
-5. Implement and test Black-Scholes pricing.
-6. Start logging model price vs. market price.
+1. Verify the JCasC-provisioned Pipeline job end to end.
+2. Verify GitHub-to-Jenkins build triggers.
+3. Define the application CI quality contract.
+4. Implement and test Black-Scholes pricing.
+5. Start logging model price vs. market price.

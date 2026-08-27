@@ -14,9 +14,20 @@ The image intentionally does not receive `/var/run/docker.sock`, privileged
 mode, AWS credentials, or repository secrets. The current pipeline only uses
 `docker compose config`, which does not require access to a Docker daemon.
 
-## Build on the Jenkins host
+## Automated deployment
 
-Clone or copy this repository to the controller host, then run:
+Terraform passes this Dockerfile into the EC2 bootstrap. The bootstrap builds
+the image, waits for the JCasC-defined `ci` node, retrieves its generated
+inbound-agent secret over the controller's local interface, and starts the
+Compose `ci` profile. No browser configuration is required.
+
+The generated connection secret remains in the root-owned
+`/srv/jenkins/ci-agent.env` runtime file. It does not pass through Terraform
+variables or state.
+
+## Manual recovery
+
+To rebuild the image manually on the Jenkins host:
 
 ```sh
 sudo docker build \
@@ -24,22 +35,14 @@ sudo docker build \
   /path/to/quant-pricing-engine/ci/agent
 ```
 
-## Connect the inbound agent
+If the container stops while its generated runtime file is still present,
+restart it with:
 
-1. In Jenkins, create a permanent node named `ci` using the **Launch agent by
-   connecting it to the controller** launch method.
-2. Copy its generated secret to `/srv/jenkins/ci-agent.env` on the host:
-
-   ```text
-   JENKINS_AGENT_SECRET=<generated-secret>
-   ```
-
-3. Start the opt-in Compose profile:
-
-   ```sh
-   cd /srv/jenkins
-   sudo docker compose --env-file ci-agent.env --profile ci up -d ci-agent
-   ```
+```sh
+cd /srv/jenkins
+sudo docker compose --env-file ci-agent.env --profile ci up -d ci-agent
+```
 
 The secret stays on the controller host and is never committed to this
-repository.
+repository. If the runtime file is lost, replace the lab instance so the IaC
+bootstrap recreates the connection rather than configuring the node by hand.

@@ -15,7 +15,41 @@ jenkins:
             name: "${JENKINS_ADMIN_ID}"
             permissions:
               - "Overall/Administer"
+  nodes:
+    - permanent:
+        name: "ci"
+        remoteFS: "/home/jenkins/agent"
+        numExecutors: 1
+        mode: EXCLUSIVE
+        labelString: "ci"
+        launcher:
+          inbound:
+            webSocket: true
+            workDirSettings:
+              disabled: false
+              failIfWorkDirIsMissing: false
+              internalDir: "remoting"
 
 unclassified:
   location:
     url: "${JENKINS_URL}"
+
+jobs:
+  - script: >
+      pipelineJob('quant-pricing-engine') {
+        description('Managed by Jenkins Configuration as Code. Executes ci/Jenkinsfile from the development branch.')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('https://github.com/5tench/quant-pricing-engine.git')
+                }
+                branch('*/development')
+              }
+            }
+            scriptPath('ci/Jenkinsfile')
+            lightweight()
+          }
+        }
+      }

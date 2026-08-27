@@ -2,6 +2,7 @@
 configuration-as-code
 matrix-auth
 git
+job-dsl
 credentials-binding
 pipeline-model-definition
 pipeline-stage-view

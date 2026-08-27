@@ -73,6 +73,7 @@ mkdir -p /srv/jenkins/home
 chown -R 1000:1000 /srv/jenkins/home
 
 mkdir -p /srv/jenkins/controller
+mkdir -p /srv/jenkins/agent
 
 cat > /srv/jenkins/docker-compose.yaml <<'COMPOSE'
 ${docker_compose_content}
@@ -89,6 +90,10 @@ CONTROLLER_PLUGINS
 cat > /srv/jenkins/controller/jenkins.yaml <<'CONTROLLER_JCASC'
 ${controller_jcasc_content}
 CONTROLLER_JCASC
+
+cat > /srv/jenkins/agent/Dockerfile <<'AGENT_DOCKERFILE'
+${agent_dockerfile_content}
+AGENT_DOCKERFILE
 
 # Generate the initial administrator secret only on the controller host. Do not
 # trace this block: cloud-init and bootstrap logs must never contain the value.
@@ -142,10 +147,55 @@ cd /srv/jenkins
 echo "Building the declarative Jenkins controller image..."
 docker build --tag quantops-jenkins-controller:0.1.0 /srv/jenkins/controller
 
+echo "Building the Jenkins CI-agent image..."
+docker build --tag quantops-jenkins-ci-agent:0.1.0 /srv/jenkins/agent
+
 docker compose up -d jenkins
 
+echo "Waiting for the JCasC-configured ci node..."
+set +x
+set -a
+. /srv/jenkins/controller.env
+set +a
+
+NETRC_FILE=/run/jenkins-bootstrap.netrc
+umask 077
+cat > "$NETRC_FILE" <<EOF
+machine localhost
+login $JENKINS_ADMIN_ID
+password $JENKINS_ADMIN_PASSWORD
+EOF
+
+AGENT_JNLP_URL=http://localhost:8080/computer/ci/jenkins-agent.jnlp
+AGENT_JNLP=""
+for attempt in $(seq 1 60); do
+  if AGENT_JNLP=$(curl -fsS --netrc-file "$NETRC_FILE" "$AGENT_JNLP_URL" 2>/dev/null); then
+    break
+  fi
+  sleep 10
+done
+
+JENKINS_AGENT_SECRET=$(printf '%s' "$AGENT_JNLP" \
+  | grep -o '<argument>[^<]*</argument>' \
+  | head -n 1 \
+  | sed 's:</\?argument>::g') || true
+if [ -z "$JENKINS_AGENT_SECRET" ]; then
+  echo "ERROR: Jenkins did not expose the ci agent connection secret." >&2
+  rm -f "$NETRC_FILE"
+  exit 1
+fi
+
+printf 'JENKINS_AGENT_SECRET=%s\n' "$JENKINS_AGENT_SECRET" > /srv/jenkins/ci-agent.env
+chmod 600 /srv/jenkins/ci-agent.env
+unset AGENT_JNLP JENKINS_AGENT_SECRET JENKINS_ADMIN_ID JENKINS_ADMIN_PASSWORD JENKINS_URL
+rm -f "$NETRC_FILE"
+set -x
+
+echo "Starting the Jenkins CI agent..."
+docker compose --env-file /srv/jenkins/ci-agent.env --profile ci up -d ci-agent
+
 echo "Verifying Jenkins containers..."
-docker compose ps
+docker compose --env-file /srv/jenkins/ci-agent.env --profile ci ps
 
 echo "Verifying Docker service..."
 systemctl is-active --quiet docker
