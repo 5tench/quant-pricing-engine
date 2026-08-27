@@ -123,6 +123,7 @@ resource "aws_instance" "jenkins_controller" {
     controller_dockerfile_content = file("${path.module}/../../../../ci/controller/Dockerfile")
     controller_plugins_content    = file("${path.module}/../../../../ci/controller/plugins.txt")
     controller_jcasc_content      = file("${path.module}/../../../../ci/controller/jenkins.yaml")
+    agent_dockerfile_content      = file("${path.module}/../../../../ci/agent/Dockerfile")
   })
 
   # Avoid T3 Unlimited-mode CPU surplus charges during this short-lived lab.

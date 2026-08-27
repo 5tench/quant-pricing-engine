@@ -15,6 +15,20 @@ jenkins:
             name: "${JENKINS_ADMIN_ID}"
             permissions:
               - "Overall/Administer"
+  nodes:
+    - permanent:
+        name: "ci"
+        remoteFS: "/home/jenkins/agent"
+        numExecutors: 1
+        mode: EXCLUSIVE
+        labelString: "ci"
+        launcher:
+          inbound:
+            webSocket: true
+            workDirSettings:
+              disabled: false
+              failIfWorkDirIsMissing: false
+              internalDir: "remoting"
 
 unclassified:
   location:
