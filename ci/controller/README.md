@@ -31,10 +31,10 @@ root-only host file. The administrator ID is `admin`.
 During bootstrap, Terraform copies this directory to `/srv/jenkins/controller`
 and builds the controller image locally before Docker Compose starts it.
 
-On an empty Jenkins home, JCasC creates the administrator and disables the
-interactive unlock/setup wizard. It does not overwrite an existing Jenkins
-home: migrate an existing controller deliberately rather than deleting its
-EBS-backed state.
+On startup, Jenkins reads JCasC from the versioned controller image, creates
+or reconciles the declared configuration, and disables the interactive
+unlock/setup wizard. Jenkins state remains on EBS; configuration updates do
+not depend on a stale reference file copied into the persistent home.
 
 ## Scope
 

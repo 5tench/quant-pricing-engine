@@ -8,5 +8,5 @@ COPY --chown=jenkins:jenkins jenkins.yaml /usr/share/jenkins/ref/casc_configs/je
 
 # JCasC supplies the secured initial configuration; do not disable the wizard
 # without this configuration and a host-local controller.env file.
-ENV CASC_JENKINS_CONFIG=/var/jenkins_home/casc_configs/jenkins.yaml
+ENV CASC_JENKINS_CONFIG=/usr/share/jenkins/ref/casc_configs/jenkins.yaml
 ENV JAVA_OPTS=-Djenkins.install.runSetupWizard=false
