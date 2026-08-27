@@ -7,7 +7,8 @@ separate from `ci/agent`, which is the isolated environment that executes CI.
 
 - `Dockerfile` extends the official Jenkins controller image.
 - `plugins.txt` declares the small controller plugin set.
-- `jenkins.yaml` configures Jenkins Configuration as Code (JCasC).
+- `jenkins.yaml` configures Jenkins Configuration as Code (JCasC), the
+  permanent `ci` node, and the repository Pipeline job.
 - `controller.env.example` documents the host-local bootstrap variables.
 
 ## First boot
@@ -37,6 +38,6 @@ EBS-backed state.
 
 ## Scope
 
-The controller has zero executors. It orchestrates pipelines; `ci-agent`
-executes them. CI-agent registration and pipeline/job provisioning remain the
-next steps after this first-boot configuration is proven.
+The controller has zero executors. It orchestrates the JCasC-managed
+`quant-pricing-engine` Pipeline; the inbound `ci-agent` executes it. GitHub
+trigger provisioning remains a separate layer of work.

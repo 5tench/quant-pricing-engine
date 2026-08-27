@@ -33,3 +33,23 @@ jenkins:
 unclassified:
   location:
     url: "${JENKINS_URL}"
+
+jobs:
+  - script: >
+      pipelineJob('quant-pricing-engine') {
+        description('Managed by Jenkins Configuration as Code. Executes ci/Jenkinsfile from the development branch.')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('https://github.com/5tench/quant-pricing-engine.git')
+                }
+                branch('*/development')
+              }
+            }
+            scriptPath('ci/Jenkinsfile')
+            lightweight()
+          }
+        }
+      }
