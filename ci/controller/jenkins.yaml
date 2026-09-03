@@ -33,11 +33,13 @@ jenkins:
 unclassified:
   location:
     url: "${JENKINS_URL}"
+  gitHubConfiguration:
+    apiRateLimitChecker: ThrottleOnOver
 
 jobs:
   - script: >
       pipelineJob('quant-pricing-engine') {
-        description('Managed by Jenkins Configuration as Code. Executes ci/Jenkinsfile from the development branch.')
+        description('Managed by Jenkins Configuration as Code. Manual baseline job for the development branch.')
         definition {
           cpsScm {
             scm {
@@ -50,6 +52,37 @@ jobs:
             }
             scriptPath('ci/Jenkinsfile')
             lightweight()
+          }
+        }
+      }
+  - script: >
+      multibranchPipelineJob('quant-pricing-engine-branches') {
+        description('Managed by Jenkins Configuration as Code. Discovers GitHub branches and pull requests every thirty minutes.')
+        branchSources {
+          github {
+            id('quant-pricing-engine-github')
+            scanCredentialsId('')
+            repoOwner('5tench')
+            repository('quant-pricing-engine')
+            buildOriginBranch(true)
+            buildOriginBranchWithPR(false)
+            buildOriginPRMerge(true)
+            buildOriginPRHead(false)
+            buildForkPRMerge(false)
+            buildForkPRHead(false)
+          }
+        }
+        configure { project ->
+          project / factory / scriptPath('ci/Jenkinsfile')
+        }
+        orphanedItemStrategy {
+          discardOldItems {
+            numToKeep(20)
+          }
+        }
+        triggers {
+          periodicFolderTrigger {
+            interval('30m')
           }
         }
       }
