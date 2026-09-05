@@ -6,12 +6,25 @@ pipeline {
         ansiColor('xterm')
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '20'))
+        skipDefaultCheckout(true)
     }
 
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Build Context') {
+            steps {
+                sh '''
+                    echo "Jenkins job: ${JOB_NAME} #${BUILD_NUMBER}"
+                    echo "SCM branch: ${BRANCH_NAME:-development}"
+                    echo "Pull request: ${CHANGE_ID:-not-a-pull-request}"
+                    echo "Pull request target: ${CHANGE_TARGET:-not-a-pull-request}"
+                    echo "Git commit: $(git rev-parse HEAD)"
+                '''
             }
         }
 

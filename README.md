@@ -27,7 +27,7 @@ The cloud side matters because the tool should eventually run like real software
 | Terraform AWS baseline | Verified | Terraform provisions the RHEL 9 lab environment, restricted networking, and persistent EBS state. |
 | Jenkins controller | Verified | The zero-executor controller runs through Docker Compose and loads configuration from the versioned JCasC image. |
 | Jenkins CI agent | Verified | The dedicated agent is provisioned as code and connects to the controller over WebSocket. |
-| Pipeline provisioning | Ready for verification | JCasC declares the repository Pipeline job from `ci/Jenkinsfile`. |
+| Pipeline provisioning | Implemented; live trigger verification pending | JCasC declares manual and multibranch jobs from `ci/Jenkinsfile`; GitHub is polled for branches and same-repository PRs. |
 | Dockerized runtime | Planned | The pricing engine should run the same locally and in AWS. |
 | Python pricing kernel | Planned | First target is Black-Scholes pricing and Greeks. |
 | Unit tests | Baseline | The package skeleton test runs locally and in the Jenkins pipeline. |
@@ -229,8 +229,8 @@ See [`ROADMAP.md`](./ROADMAP.md) for the fuller build plan.
 
 Near-term priorities:
 
-1. Verify the JCasC-provisioned Pipeline job end to end.
-2. Verify GitHub-to-Jenkins build triggers.
-3. Define the application CI quality contract.
-4. Implement and test Black-Scholes pricing.
+1. Live-test branch and pull-request discovery on the next lab deployment.
+2. Define the application CI quality contract.
+3. Define pricing-domain primitives and the model interface.
+4. Implement and test Black-Scholes pricing and Greeks.
 5. Start logging model price vs. market price.

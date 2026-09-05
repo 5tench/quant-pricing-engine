@@ -2,6 +2,7 @@
 configuration-as-code
 matrix-auth
 git
+github-branch-source
 job-dsl
 credentials-binding
 pipeline-model-definition
